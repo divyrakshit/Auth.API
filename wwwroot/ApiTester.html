@@ -149,6 +149,14 @@
             <div id="adminResponse" class="response" style="display:none;"></div>
         </div>
 
+        <!-- Moderator Endpoint Section -->
+        <div class="section">
+            <h2>Step 4: Test Moderator Endpoint</h2>
+            <p style="margin-bottom: 10px; color: #666;">Get moderator info (requires Moderator role)</p>
+            <button onclick="testModerator()">🛡️ Get Moderator Info</button>
+            <div id="moderatorResponse" class="response" style="display:none;"></div>
+        </div>
+
         <!-- Test Users Section -->
         <div class="section">
             <h2>📋 Available Test Users</h2>
@@ -156,17 +164,20 @@
                 <div style="padding: 10px; background: white; border-radius: 5px;">
                     <strong>admin</strong><br>
                     Pass: admin123<br>
-                    <span style="color: #28a745;">✓ Admin</span>
+                    <span style="color: #28a745;">✓ Admin</span><br><br>
+                    <button onclick="quickLogin('admin', 'admin123')" style="width: 100%; padding: 8px; font-size: 0.9em; background: #28a745;">Login as Admin</button>
                 </div>
                 <div style="padding: 10px; background: white; border-radius: 5px;">
                     <strong>user</strong><br>
                     Pass: user123<br>
-                    <span style="color: #ffc107;">User only</span>
+                    <span style="color: #ffc107;">User only</span><br><br>
+                    <button onclick="quickLogin('user', 'user123')" style="width: 100%; padding: 8px; font-size: 0.9em; background: #ffc107; color: #333;">Login as User</button>
                 </div>
                 <div style="padding: 10px; background: white; border-radius: 5px;">
                     <strong>moderator</strong><br>
                     Pass: moderator123<br>
-                    <span style="color: #ffc107;">Moderator</span>
+                    <span style="color: #17a2b8;">Moderator</span><br><br>
+                    <button onclick="quickLogin('moderator', 'moderator123')" style="width: 100%; padding: 8px; font-size: 0.9em; background: #17a2b8;">Login as Moderator</button>
                 </div>
             </div>
         </div>
@@ -175,6 +186,12 @@
     <script>
         let authToken = '';
         const API_URL = 'http://localhost:5268';
+
+        function quickLogin(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            login();
+        }
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -267,6 +284,36 @@
                 } else {
                     showResponse(responseDiv, `Status ${response.status}: Access Denied\n\nYou need Admin role to access this endpoint.`, 'error');
                     showStatus('✗ Access Denied - Admin role required', 'error');
+                }
+            } catch (error) {
+                showResponse(responseDiv, `Error: ${error.message}`, 'error');
+                showStatus('✗ Connection error', 'error');
+            }
+        }
+
+        async function testModerator() {
+            if (!authToken) {
+                showStatus('✗ Please login first', 'error');
+                return;
+            }
+
+            const responseDiv = document.getElementById('moderatorResponse');
+            try {
+                const response = await fetch(`${API_URL}/api/secure/moderator`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResponse(responseDiv, JSON.stringify(data, null, 2), 'success');
+                    showStatus('✓ Moderator endpoint works!', 'success');
+                } else {
+                    showResponse(responseDiv, `Status ${response.status}: Access Denied\n\nYou need Moderator role to access this endpoint.`, 'error');
+                    showStatus('✗ Access Denied - Moderator role required', 'error');
                 }
             } catch (error) {
                 showResponse(responseDiv, `Error: ${error.message}`, 'error');

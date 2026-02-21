@@ -74,4 +74,32 @@ public class SecureController : ControllerBase
 
         return Ok(adminInfo);
     }
+
+    /// <summary>
+    /// Moderator-only endpoint that requires Moderator role
+    /// </summary>
+    /// <returns>Moderator information and access confirmation</returns>
+    [HttpGet("moderator")]
+    [Authorize(Roles = "Moderator")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public IActionResult GetModerator()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var username = User.FindFirst(ClaimTypes.Name)?.Value;
+        var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+
+        _logger.LogInformation($"Moderator endpoint accessed by: {username}");
+
+        var moderatorInfo = new
+        {
+            id = userId,
+            username = username,
+            roles = roles,
+            message = "This is a moderator-only endpoint. Access granted because you have the Moderator role."
+        };
+
+        return Ok(moderatorInfo);
+    }
 }
