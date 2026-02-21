@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth.API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        input, button {
+            font-family: inherit;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 12px 20px;
+            width: 100%;
+            transition: background 0.3s;
+            font-size: 1em;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            color: #28a745;
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .info {
+            color: #004085;
+            background: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .token-display {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            word-break: break-all;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Auth.API Tester</h1>
+        
+        <!-- Login Section -->
+        <div class="section">
+            <h2>Step 1: Login</h2>
+            <input type="text" id="username" placeholder="Username (e.g., admin)" value="admin">
+            <input type="password" id="password" placeholder="Password (e.g., admin123)" value="admin123">
+            <button onclick="login()">🔑 Login</button>
+            <div id="loginResponse" class="response" style="display:none;"></div>
+            <div id="tokenDisplay" class="token-display" style="display:none;">Token will appear here</div>
+        </div>
+
+        <!-- User Endpoint Section -->
+        <div class="section">
+            <h2>Step 2: Test User Endpoint</h2>
+            <p style="margin-bottom: 10px; color: #666;">Get user info (requires authentication)</p>
+            <button onclick="testUser()">👤 Get User Info</button>
+            <div id="userResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Admin Endpoint Section -->
+        <div class="section">
+            <h2>Step 3: Test Admin Endpoint</h2>
+            <p style="margin-bottom: 10px; color: #666;">Get admin info (requires Admin role)</p>
+            <button onclick="testAdmin()">👑 Get Admin Info</button>
+            <div id="adminResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Test Users Section -->
+        <div class="section">
+            <h2>📋 Available Test Users</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                <div style="padding: 10px; background: white; border-radius: 5px;">
+                    <strong>admin</strong><br>
+                    Pass: admin123<br>
+                    <span style="color: #28a745;">✓ Admin</span>
+                </div>
+                <div style="padding: 10px; background: white; border-radius: 5px;">
+                    <strong>user</strong><br>
+                    Pass: user123<br>
+                    <span style="color: #ffc107;">User only</span>
+                </div>
+                <div style="padding: 10px; background: white; border-radius: 5px;">
+                    <strong>moderator</strong><br>
+                    Pass: moderator123<br>
+                    <span style="color: #ffc107;">Moderator</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = '';
+        const API_URL = 'http://localhost:5268';
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const responseDiv = document.getElementById('loginResponse');
+
+            if (!username || !password) {
+                showResponse(responseDiv, 'Please enter username and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    const tokenDisplay = document.getElementById('tokenDisplay');
+                    tokenDisplay.textContent = `Token: ${authToken.substring(0, 50)}...`;
+                    tokenDisplay.style.display = 'block';
+                    showResponse(responseDiv, JSON.stringify(data, null, 2), 'success');
+                    showStatus('✓ Login successful!', 'success');
+                } else {
+                    showResponse(responseDiv, data.message || 'Login failed', 'error');
+                    showStatus('✗ Login failed', 'error');
+                }
+            } catch (error) {
+                showResponse(responseDiv, `Error: ${error.message}\n\nMake sure the API is running at ${API_URL}`, 'error');
+                showStatus('✗ Connection error', 'error');
+            }
+        }
+
+        async function testUser() {
+            if (!authToken) {
+                showStatus('✗ Please login first', 'error');
+                return;
+            }
+
+            const responseDiv = document.getElementById('userResponse');
+            try {
+                const response = await fetch(`${API_URL}/api/secure/user`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResponse(responseDiv, JSON.stringify(data, null, 2), 'success');
+                    showStatus('✓ User endpoint works!', 'success');
+                } else {
+                    showResponse(responseDiv, JSON.stringify(data, null, 2), 'error');
+                    showStatus('✗ Failed to get user info', 'error');
+                }
+            } catch (error) {
+                showResponse(responseDiv, `Error: ${error.message}`, 'error');
+                showStatus('✗ Connection error', 'error');
+            }
+        }
+
+        async function testAdmin() {
+            if (!authToken) {
+                showStatus('✗ Please login first', 'error');
+                return;
+            }
+
+            const responseDiv = document.getElementById('adminResponse');
+            try {
+                const response = await fetch(`${API_URL}/api/secure/admin`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResponse(responseDiv, JSON.stringify(data, null, 2), 'success');
+                    showStatus('✓ Admin endpoint works!', 'success');
+                } else {
+                    showResponse(responseDiv, `Status ${response.status}: Access Denied\n\nYou need Admin role to access this endpoint.`, 'error');
+                    showStatus('✗ Access Denied - Admin role required', 'error');
+                }
+            } catch (error) {
+                showResponse(responseDiv, `Error: ${error.message}`, 'error');
+                showStatus('✗ Connection error', 'error');
+            }
+        }
+
+        function showResponse(element, content, type) {
+            element.textContent = content;
+            element.className = `response ${type}`;
+            element.style.display = 'block';
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.querySelector('.status') || createStatusDiv();
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function createStatusDiv() {
+            const div = document.createElement('div');
+            document.querySelector('.container').appendChild(div);
+            return div;
+        }
+
+        // Check API connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'test', password: 'test' })
+                });
+                if (response.status === 401 || response.status === 400) {
+                    showStatus('✓ API is running and ready! Use test credentials to login.', 'success');
+                }
+            } catch (error) {
+                showStatus(`✗ Cannot connect to API at ${API_URL}\nMake sure the application is running!`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
